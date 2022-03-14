@@ -1,0 +1,95 @@
+//////////////////
+//XmlAnalysis//
+/////////////////
+
+>>构造函数
+XmlAnalysis(const string& filename, const EndlType& endltype)
+ filename: xml文件路径
+ endltype: 枚举类型, 取值有EndlType::Unix/EndlType::Windows, 对于老师给的xml,这里应取前者, 测试用的test.xml应取后者
+
+构造后调用类方法analyse(size_t blockSize)
+ blockSize: xml文件将被分块读入,此为每次读入的大小
+
+>>其他类方法
+ getRate(): 返回当前的大致进度, 以小数表示, 返回值为double类型
+ getIndexPath(): 返回建立的索引文件的路径, 返回值为std::string类型
+   索引文件目录如下
+   软件当前目录下会创建"xmlIndex"文件夹
+   "xmlIndex"文件夹内会创建名为对应xml文件名的文件夹(不含扩展名)
+   上述文件夹含有"title"文件(title索引), "author"文件(author索引), "year"文件夹
+   "year"文件夹内含有多个文件, 以年份命名, 内容为对应年份的title集合
+   返回的路径如下: xmlIndex/xml文件名
+
+>>Ex. 该类无复制构造函数, 不可作为参数传递, 不可赋值构造
+
+///////////////
+//XmlIndex//
+//////////////
+
+>>构造函数
+XmlIndex(const string& xmlPath, const string& indexPath)
+ xmlPath: xml文件路径
+ indexPath: XmlAnalysis中建立的索引文件路径
+
+构造后调用类方法setIndexBlockSize(size_t blockSize)
+ blockSize: 对索引文件每隔一个固定的大小再做索引, 存在内存中便于查找, 此为该大小
+
+调用setItemSize(size_t itemSize)
+ itemSize: 缓冲区大小, 应大于单条完整数据的最小长度
+
+调用makeIndex(), 在内存中建立索引的索引
+
+>>查找实现
+使用find(string key)进行查找, 若成功则返回true
+查找成功后调用next()遍历结果
+在next()后可调用getPos()返回对应的索引位置,返回值为unsigned long long类型(64位下)
+也可调用getItem(size_t pos)返回对应的整条记录, 返回值为std::string类型
+   pos: 索引的位置
+
+>>Eg.
+	XmlIndex iindex(xmlpath,indexpath);
+	iindex.setIndexBlockSize(10000000);
+	iindex.setItemSize(2000);
+	iindex.makeIndex();
+	if(iindex.find(key)) {
+		while(iindex.next()) {
+			cout<<iindex.getItem(iindex.getPos());
+			//输出key对应的每条记录
+		}
+	}
+
+>>Ex. 该类有复制构造函数, 可以作为参数传递, 可以赋值构造
+
+//////////////
+//XmlItem//
+/////////////
+
+>>构造函数
+XmlItem(const string& xmlitem)
+ xmlitem: 应是XmlIndex中getItem得到的返回值
+
+>>其他函数
+ getTitle(): 返回记录对应的title, 返回值为std::string类型, 若无则返回空串
+ getAuthor(): 返回记录对应的author, 重复调用可以按记录顺序返回作者, 返回全部作者后返回空串
+ nextTag(): 遍历记录中所有的标签及标签值(包括title和author), 可遍历时返回true
+ getTag(): 调用nextTag()后返回标签名, 返回值为std::string类型
+ getDetail(): 调用nextTag()后返回标签值, 返回值为std::string类型
+
+>>eg.
+	XmlItem item=iindex.getItem(iindex.getPos());
+	cout<<item.getTitle()<<endl; //输出title
+	for(string author=item.getAuthor(); !author.empty(); author=item.getAuthor()) {
+		cout<<author<<endl;
+	} //输出所有的作者
+	while(item.nextTag()) {
+		cout<<item.getTag()<<ends<<item.getDetail()<<endl;
+	} 输出所有的标签及标签值
+
+>>Ex. 该类有复制构造函数, 可以作为参数传递, 可以赋值构造
+
+///////////////
+//Above All//
+//////////////
+为了查找时不分大小写, 在索引文件中的所有title及author都转换成了小写
+XmlIndx中的find方法也做了参数的小写转换
+因此直接从索引文件中输出title和author时应转换为Title样式的字符串
